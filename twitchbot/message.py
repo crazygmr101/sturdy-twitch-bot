@@ -1,6 +1,11 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from twitchbot.bot import TwitchBot
 
 
 @dataclass
@@ -30,3 +35,4 @@ class Message:
     arg_list: Optional[str]
     cmd:  Optional[str]
     type: str
+    bot: TwitchBot

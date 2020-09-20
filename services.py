@@ -1,5 +1,6 @@
-async def cnt1(bot):
-    print(1)
+from twitchbot.message import Message
 
-async def cnt2(bot):
-    print(2)
+
+async def add(m: Message):
+    num = list(map(int, m.arg_list.split()))
+    await m.bot.send(sum(num))

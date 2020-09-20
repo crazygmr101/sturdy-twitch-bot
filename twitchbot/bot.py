@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import datetime
 import logging
-from typing import Dict, Callable, Awaitable, List, Optional
+from typing import Dict, Callable, Awaitable, List, Optional, Any
 
 import websockets
 
@@ -15,7 +15,7 @@ class TwitchBot:
         self.token = token
         self.channel = channel
         self.username = username
-        self._message_callbacks: Dict[str, Callable[[Message], Awaitable[None]]] = {}
+        self._command_callbacks: Dict[str, Callable[[Message], Awaitable[None]]] = {}
         self._state_callbacks: Dict[str, List[Callable[[TwitchBot], Awaitable[None]]]] = {}
         self._connection: Optional[websockets.WebSocketClientProtocol] = None
         self._prefix = prefix
@@ -37,7 +37,7 @@ class TwitchBot:
         if content.startswith(self._prefix):
             if len(m[2].split()) > 1:
                 cmd = m[2][len(self._prefix):m[2].index(" ")]
-                arg_list = m[2][m[2].index(" ")+1:]
+                arg_list = m[2][m[2].index(" ") + 1:]
             else:
                 cmd = m[2][len(self._prefix):]
                 arg_list = None
@@ -48,8 +48,8 @@ class TwitchBot:
                        m[1].split()[0].split("!")[0],
                        arg_list,
                        cmd,
-                       m[1].split()[1])
-
+                       m[1].split()[1],
+                       self)
 
     # endregion
 
@@ -79,15 +79,19 @@ class TwitchBot:
             if msg == "PING :tmi.twitch.tv":
                 await self._send("PONG :tmi.twitch.tv")
                 continue
-
-
+            converted = await self._conv_msg(msg)
+            if converted.user.lower() == self.username.lower():
+                continue
+            if converted.cmd and converted.cmd in self._command_callbacks:
+                logging.info(f"calling {converted.cmd} with {converted.arg_list}")
+                await self._command_callbacks[converted.cmd](converted)
 
     # endregion
 
     def add_command_callback(self, name: str, callback: Callable[[Message], Awaitable[None]]):
-        if name in self._message_callbacks:
+        if name in self._command_callbacks:
             raise ValueError("Callback already added")
-        self._message_callbacks[name] = callback
+        self._command_callbacks[name] = callback
 
     def add_state_callback(self, name: str, callback: Callable[[TwitchBot], Awaitable[None]]):
         if name not in ("connect", "disconnect"):
@@ -95,3 +99,6 @@ class TwitchBot:
         if name not in self._state_callbacks:
             self._state_callbacks[name] = []
         self._state_callbacks[name].append(callback)
+
+    async def send(self, msg: Any):
+        await self._send(f"PRIVMSG #{self.channel} :{msg}")

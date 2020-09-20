@@ -11,11 +11,10 @@ dotenv.load_dotenv()
 logging.basicConfig(level=logging.INFO)
 
 bot = TwitchBot(os.getenv("OAUTH"),
-                os.getenv("USER"),
                 os.getenv("CHANNEL"),
+                os.getenv("USERNAME"),
                 "-")
 
-bot.add_state_callback("connect", services.cnt1)
-bot.add_state_callback("connect", services.cnt2)
+bot.add_command_callback("add", services.add)
 
 bot.run()
